@@ -1,14 +1,15 @@
 [BITS 16]
 org 0x7c00
 
-xor ax, ax
+;Инициализация сегментных регистров
+xor ax, ax		
 mov dx, ax
-mov ss, ax
-mov ds, ax
-mov es, ax
-mov fs, ax
+mov ss, ax		;ss-stack segment
+mov ds, ax		;ds-data segment
+mov es, ax		; es,fs,gs-дополнительные сегментные регистры
+mov fs, ax		
 mov gs, ax
-jmp 0x0:start
+jmp 0x0:start		;инициализация cs-code segment
  
 msg: db 'Hello World', 0
 msg_len: equ $-msg
@@ -42,23 +43,24 @@ msg_len: equ $-msg
 
 
 start:
-	mov ax,3h
+	mov ax,3h		;Change video mode
 	int 10h
 
-	mov ah, 13h
-	mov al, 0x01
+	mov ah, 13h		;write string
+	mov al, 0x01		;write mode without attributes
 
-	mov bl, 0x0f
+	mov bl, 0x0f		;attribute
 	mov cx, msg_len	
 	mov bp, msg
 	int 10h
 
 read_sector:
-	mov al, 0x4
-	xor ch, ch
-	mov cl, 0x02
-	xor dh, dh
-	mov dl, 0x80
+	mov ah, 02h
+	mov al, 4h		;Count of sectors 
+	xor ch, ch		;Cylinder number
+	mov cl, 0x02		;Sector number
+	xor dh, dh		;Head number
+	xor dl, dl		;Disk number
 	int 13h
 
 
