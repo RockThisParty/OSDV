@@ -10,7 +10,7 @@ mov es, ax		; es,fs,gs-дополнительные сегментные рег�
 mov fs, ax		
 mov gs, ax
 jmp 0x0:start		;инициализация cs-code segment
- 
+
 msg: db 'Hello World', 0
 msg_len: equ $-msg
 
@@ -55,14 +55,31 @@ start:
 	int 10h
 
 read_sector:
-	mov ah, 02h
-	mov al, 4h		;Count of sectors 
+	mov bx, 0x07e0
+	mov es, bx
+	mov ah, 2
+	mov al, 2		;Count of sectors 
 	xor ch, ch		;Cylinder number
-	mov cl, 0x02		;Sector number
+	mov cl, 2h		;Sector number
 	xor dh, dh		;Head number
-	xor dl, dl		;Disk number
+	xor dl, 80h		;Disk number
 	int 13h
 
+	mov cx, 80
+	mov bl, 0x0f
+	xor bh, bh
+	xor dx, dx
+	xor bp, bp
+	sub bp, 512
+.write:
+	mov ax, 13h
+	inc dh
+	add bp, 512
+	int 10h
+	cmp dh, 2
+	jle .write
+
+	jmp $	
 
 times 510-($-$$) db 0
 
