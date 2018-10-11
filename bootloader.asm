@@ -6,7 +6,7 @@ xor ax, ax
 mov dx, ax
 mov ss, ax		;ss-stack segment
 mov ds, ax		;ds-data segment
-mov es, ax		; es,fs,gs-дополнительные сегментные регистры
+mov es, ax		;es,fs,gs-дополнительные сегментные регистры
 mov fs, ax		
 mov gs, ax
 jmp 0x0:start		;инициализация cs-code segment
@@ -57,29 +57,51 @@ start:
 read_sector:
 	mov bx, 0x07e0
 	mov es, bx
-	mov ah, 2
-	mov al, 2		;Count of sectors 
+	mov ah, 2h
+	mov al, 2h		;Count of sectors 
 	xor ch, ch		;Cylinder number
 	mov cl, 2h		;Sector number
 	xor dh, dh		;Head number
 	xor dl, 80h		;Disk number
+	xor bx, bx
 	int 13h
 
-	mov cx, 80
+	mov cx, 80h
 	mov bl, 0x0f
 	xor bh, bh
-	xor dx, dx
 	xor bp, bp
+	xor dx, dx
 	sub bp, 512
+
 .write:
-	mov ax, 13h
+	mov ah, 13h
+	mov al, 1
 	inc dh
 	add bp, 512
 	int 10h
+
 	cmp dh, 2
 	jle .write
 
-	jmp $	
+;	mov ah, 13h
+;	mov al, 1
+;	mov cx, 80h
+;	mov bl, 0x0f
+;	xor bh, bh
+;	xor bp, bp
+;	int 10h	
+;	
+;	mov ah, 13h
+;	mov al, 1
+;	inc dh
+;	add bp,512
+;	int 10h
+;
+;	mov ah, 13h
+;	mov al, 1
+;	inc dh
+;	add bp,512
+;	int 10h
 
 times 510-($-$$) db 0
 
