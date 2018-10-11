@@ -83,6 +83,8 @@ read_sector:
 	cmp dh, 2
 	jle .write
 
+	jmp $
+
 ;	mov ah, 13h
 ;	mov al, 1
 ;	mov cx, 80h
