@@ -66,6 +66,8 @@ read_sector:
 	xor bx, bx
 	int 13h
 
+	jmp 0x7e00
+
 	mov cx, 80h
 	mov bl, 0x0f
 	xor bh, bh
@@ -82,8 +84,6 @@ read_sector:
 
 	cmp dh, 2
 	jle .write
-
-	jmp $
 
 ;	mov ah, 13h
 ;	mov al, 1
