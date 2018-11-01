@@ -1,106 +1,102 @@
 [bits 16]
-[org 0x7c00]
+[org 0x7e00]
 
-gdt_null:
-    dd 0x0
-    dd 0x0
 
-gdt_code:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 0x9A
-    db 0xCF
-    db 0x0
+; |----------------------2 bytes--------------------|
+;
+; +-------------------------------------------------+
+; | segment address 24-31  | flags #2  | len 16-19  | +6
+; +-------------------------------------------------+
+; | flags #1               | segment address 16-23  | +4
+; +-------------------------------------------------+
+; | segment address bits 0-15                       | +2
+; +-------------------------------------------------+
+; | segment length bits 0-15                        | +0
+; +-------------------------------------------------+
 
-gdt_data:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 0x92
-    db 0xCF
-    db 0x0
 
-gdt_descriptor:
-    dw gdt_descriptor - gdt_null -1
-	dd gdt_null
+cli			;disable interrupts
 
-CODE_SEG equ gdt_code - gdt_start
-DATA_SEG equ gdt_data - gdt_start
+lgdt[gdt_descriptor]	;initial gdt
 
-print:
-    pusha
-    mov ah, 14
-    mov bh, 0
-.loop:
-    lodsb
-    cmp al, 0
-    je .done
-    int 0x10
-    jmp .loop
-.done:
-    popa
-    ret
+mov eax, cr0		;cr0->0
+or al, 1
+mov cr0, eax
 
-protected_msg db 'protected mode enabled', 0
-
-kernel_start:
-    mov ax, 0
-    mov ss, ax
-    mov sp, 0xFFFC
-
-    mov ax, 0
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-	mov si, protected_msg
-    call print
-
-    cli
-    lgdt[gdt_descriptor]
-    mov eax, cr0
-    or eax, 0x1
-    mov cr0, eax
-    jmp CODE_SEG:b32
+jmp code_seg:start
 
 [bits 32]
 
-VIDEO_MEMORY equ 0xb8000
-WHITE_ON_BLACK equ 0x0f
-
-print32:
-    pusha
-    mov edx, VIDEO_MEMORY
-.loop:
-    mov al, [ebx]
-    mov ah, 0
-    cmp al, 0
-    je .done
-    mov [edx], ax
-    add ebx, 1
-    add edx, 2
-    jmp .loop
-.done:
-    popa
-    ret
-
-b32:
-    mov ax, DATA_SEG
+start:
+    mov ax, data_seg	;second descriptor- data segment
     mov ds, ax
     mov es, ax
     mov fs, ax
-    mov gs, ax
     mov ss, ax
-
-    mov ebp, 0x2000
-    mov esp, ebp
-
-    mov ebx, uzenet32
-    call print32
-
+    mov gs, ax
+    
+    mov edx, 0xb8000 + 160
+    mov esi, msg
+    mov ah, 0x0f
+    call print
     jmp $
 
-[SECTION signature start=0x7dfe]
-dw 0AA55h
+print:
+    mov al, [esi]
+    cmp al, 0
+    je .end
+    mov [edx], ax
+    add edx, 2
+    inc esi
+    jmp print
+.end:
+    ret
+
+gdt_null:
+    dd 0
+    dd 0
+
+gdt_code:
+    dw 0xffff		;limit 0-15
+    dw 0		;base 0-23
+    db 0
+    db 0x9A		;access byte 10011010b
+			;7: 1 - valid sector
+			;6-5: privelege (0 - kernel)
+			;4: reserved 1
+			;3: 1 - code segment
+			;2: 0 - c b executed from kernel
+			;1: 1 - readable
+			;0: 0 - reserved
+    db 0xCF		;11001111b flags + limit 16-19
+			;granularity -  1
+			;1 - 32 bit
+    db 0		;base 24-31
+
+gdt_data:
+    dw 0xffff		;segment length
+    dw 0		;segment address 0-15
+    db 0		;16-23
+    db 0x92		;10010010b
+			;7: 1 - valid sector
+			;6-5: privelege (0 - kernel)
+			;4: reserved 1
+			;3: 0 - data segment
+			;2: 0 - segment grows up
+			;1: 1 - writable
+			;0: 0 - reserved
+    db 0xCF		;11001111b flags + limit 16-19
+			;granularity -  1
+			;1 - 32 bit protected flags 2, segment length 16-19
+    db 0x0		;segment address 24-31
+
+gdt_descriptor:
+    dw gdt_descriptor - gdt_null -1
+    dd gdt_null
+
+code_seg equ gdt_code - gdt_null
+data_seg equ gdt_data - gdt_null
+
+msg db 'protected mode', 0
+
+times 512 - ($ - $$) db 0
