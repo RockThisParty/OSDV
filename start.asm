@@ -40,7 +40,12 @@ start:
     mov esi, msg
     mov ah, 0x0f
     call print
+	
+    extern cprint
+    call cprint
+
     jmp $
+
 
 print:
     mov al, [esi]
