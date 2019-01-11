@@ -1,24 +1,55 @@
-const char *str = "Hello C World";
+//const char *str = "Hello C World";
+char * const vidptr = (char *)0xb8000;
+unsigned global_vid_pointer = 0;
 
-void cprint(void)
+void cclear(void)
 {
-    char *vidptr = (char *)0xb8000;
-    unsigned j=80*3, i=0;
+    unsigned j=0;
     
-    /*while(j<80*25)
+    while(j<80*25)
     {
 	vidptr[j<<1] = ' ';
 	vidptr[(j<<1)+1] = 0x02;
-	j++;
+	++j;
     }
-    */
+}
 
+void cprint(char str[])
+{
+    unsigned i=0;
+   
     while(str[i] != '\0')
     {
-	vidptr[j<<1] = str[i];
-	vidptr[(j<<1)+1] = 0x0f;
-	++j;
+	vidptr[global_vid_pointer<<1] = str[i];
+	vidptr[(global_vid_pointer<<1)+1] = 0x0f;
+	++global_vid_pointer;
 	++i; 
     }
+	if(global_vid_pointer == 80*25) scroll();
     return;
+}
+
+void scroll()
+{
+	unsigned tmp=0;
+	
+	while(tmp<80*24)
+	{
+		vidptr[tmp<<1] = vidptr[(tmp<<1) + 80*2];
+		++tmp;
+	}
+
+	while(tmp<80*25)
+	{	
+		vidptr[tmp<<1] = ' ';
+		++tmp;
+	}
+	
+	global_vid_pointer = 80*24;
+}
+
+void cmain()
+{
+	cprint("fghjkl");
+	return;
 }

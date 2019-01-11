@@ -41,8 +41,8 @@ start:
     mov ah, 0x0f
     call print
 	
-    extern cprint
-    call cprint
+    extern cmain
+    call cmain
 
     jmp $
 
