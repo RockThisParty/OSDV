@@ -58,7 +58,7 @@ read_sector:
 	mov bx, 0x07e0
 	mov es, bx
 	mov ah, 2h
-	mov al, 2h		;Count of sectors 
+	mov al, 10h		;Count of sectors 
 	xor ch, ch		;Cylinder number
 	mov cl, 2h		;Sector number
 	xor dh, dh		;Head number
@@ -74,36 +74,6 @@ read_sector:
 	xor bp, bp
 	xor dx, dx
 	sub bp, 512
-
-.write:
-	mov ah, 13h
-	mov al, 1
-	inc dh
-	add bp, 512
-	int 10h
-
-	cmp dh, 2
-	jle .write
-
-;	mov ah, 13h
-;	mov al, 1
-;	mov cx, 80h
-;	mov bl, 0x0f
-;	xor bh, bh
-;	xor bp, bp
-;	int 10h	
-;	
-;	mov ah, 13h
-;	mov al, 1
-;	inc dh
-;	add bp,512
-;	int 10h
-;
-;	mov ah, 13h
-;	mov al, 1
-;	inc dh
-;	add bp,512
-;	int 10h
 
 times 510-($-$$) db 0
 
