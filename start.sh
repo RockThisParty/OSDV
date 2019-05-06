@@ -1,1 +1,1 @@
-echo c | bochs -qf bochs.config
+bochs -qf bochs.config

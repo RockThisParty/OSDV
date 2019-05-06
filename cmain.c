@@ -1,5 +1,6 @@
 //const char *str = "Hello C World";
 #include "interrupt.h"
+#include "common.h"
 
 #define PANIC(err_msg) PANIC_FUNC(err_msg,__FILE__,__LINE__)
 
@@ -43,19 +44,21 @@ void print(const char str[])
 {
     unsigned i=0;
    
-    while(str[i] != '\0')
+    while(str[i])
     {
 		if(str[i] == '\n')
 		{
 			global_vid_pointer = global_vid_pointer - (global_vid_pointer % 80) + 80;
 		}
-		vidptr[global_vid_pointer<<1] = str[i];
-		vidptr[(global_vid_pointer<<1)+1] = 0x0f;
-		++global_vid_pointer;
+		else
+		{
+			vidptr[global_vid_pointer<<1] = str[i];
+			vidptr[(global_vid_pointer<<1)+1] = 0x0f;
+			++global_vid_pointer;
+		}
+		if(global_vid_pointer == 80*25) scroll();
 		++i;
     }
-	if(global_vid_pointer == 80*25) scroll();
-    return;
 }
 
 void reverse(char* str, int length)
@@ -70,7 +73,7 @@ void reverse(char* str, int length)
 	}
 }
 
-char* itos (int value, char* dest, const unsigned base)
+char* itos (int value, const unsigned base)
 {
 	unsigned char i = 0;
 	unsigned char isNegative = 0;
@@ -109,7 +112,7 @@ char* itos (int value, char* dest, const unsigned base)
 
 void PANIC_FUNC(const char* err_msg, const char* filename, int line)
 {
-	itos(line, dest, 10);
+	itos(line, 10);
 	print("PANIC: ");
 	print(filename);
 	print(":");
@@ -122,26 +125,33 @@ void PANIC_FUNC(const char* err_msg, const char* filename, int line)
 //-------------------------------
 //Start IDT
 //-------------------------------
-idt_entry_t idt_entries[32] __attribute__((aligned(8)));
+idt_gate_t idt_gate[32] __attribute__((aligned(8)));
 
-idt_ptr_t idt_ptr;
+idt_register_t idt_register;
 
 void isr_handler(registers_t regs)
 {
 	print("recieved interrupt: ");
-	print(itos(regs.num,dest, 10));
+	print(itos(regs.num, 10));
 	print("\n");
-	while(1);
+	//while(1);
+}
+
+void irq_handler(registers_t regs)
+{
+	print(itos(regs.num, 10));
+	print("\n");
+	//while(1);
 }
 
 static void idt_set_gate(const unsigned int index, const unsigned int offset, const unsigned short int selector, const unsigned char type_attr)
 {
-	idt_entries[index].base_lo = offset & 0xFFFF;
-	idt_entries[index].base_hi = (offset >> 16) & 0xFFFF;
+	idt_gate[index].base_lo = offset & 0xFFFF;
+	idt_gate[index].base_hi = (offset >> 16) & 0xFFFF;
 	
-	idt_entries[index].sel = selector;
-	idt_entries[index].always0 = 0;
-	idt_entries[index].flags = type_attr;
+	idt_gate[index].sel = selector;
+	idt_gate[index].always0 = 0;
+	idt_gate[index].flags = type_attr;
 }
 
 void init_idt()
@@ -179,13 +189,47 @@ void init_idt()
 	idt_set_gate(30, (unsigned int)isr30, 0x08, 0x8E);
 	idt_set_gate(31, (unsigned int)isr31, 0x08, 0x8E);
 
-	idt_ptr.base = (unsigned int)&idt_entries;
-	idt_ptr.limit = sizeof(idt_entry_t) * 32 - 1;
+	//Remap the irq table
+	outb(0x20, 0x11);
+	outb(0xa0, 0x11);
+
+	outb(0x21, 0x20);
+	outb(0xa1, 0x28);
+	outb(0x21, 0x04);
+	outb(0xa1, 0x02);
+
+	outb(0x21, 0x01);
+	outb(0xa1, 0x01);
+
+	outb(0x21, 0x00);
+	outb(0xa1, 0x00);
+
+
+	idt_set_gate(32, (unsigned int)irq0, 0x08, 0x08E);
+	idt_set_gate(33, (unsigned int)irq1, 0x08, 0x08E);
+	idt_set_gate(34, (unsigned int)irq2, 0x08, 0x08E);
+	idt_set_gate(35, (unsigned int)irq3, 0x08, 0x08E);
+	idt_set_gate(36, (unsigned int)irq4, 0x08, 0x08E);
+	idt_set_gate(37, (unsigned int)irq5, 0x08, 0x08E);
+	idt_set_gate(38, (unsigned int)irq6, 0x08, 0x08E);
+	idt_set_gate(39, (unsigned int)irq7, 0x08, 0x08E);
+	idt_set_gate(40, (unsigned int)irq8, 0x08, 0x08E);
+	idt_set_gate(41, (unsigned int)irq9, 0x08, 0x08E);
+	idt_set_gate(42, (unsigned int)irq10, 0x08, 0x08E);
+	idt_set_gate(43, (unsigned int)irq11, 0x08, 0x08E);
+	idt_set_gate(44, (unsigned int)irq12, 0x08, 0x08E);
+	idt_set_gate(45, (unsigned int)irq13, 0x08, 0x08E);
+	idt_set_gate(46, (unsigned int)irq14, 0x08, 0x08E);
+	idt_set_gate(47, (unsigned int)irq15, 0x08, 0x08E);
+
+	idt_register.base = (unsigned int)&idt_gate;
+	idt_register.limit = sizeof(idt_gate_t) * 32 - 1;
 
 	asm volatile(
+		"sti\n\t"
 		"lidt [%0]"
 		:
-		:"m"(idt_ptr)
+		:"m"(idt_register)
 	);
 }	
 //-------------------------------
@@ -196,6 +240,7 @@ int cmain()
 	//PANIC("ERROR");
 	//print("Hello World on C\n");
 	init_idt();
-	asm volatile("int 17");
+	asm volatile("sti\n\t");
+	//asm volatile("int 13");
 	return 0;
 }

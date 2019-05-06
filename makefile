@@ -7,8 +7,8 @@ build: clean bootloader.bin kernel
 	dd if=kernel of=disk.img bs=512 count=64 seek=1 conv=notrunc
 	./start.sh
 
-kernel: cmain.o start.o isr.o
-	ld -T linker.ld -o kernel cmain.o start.o isr.o
+kernel: cmain.o start.o isr.o common.o
+	ld -T linker.ld -o kernel cmain.o start.o isr.o common.o
 
 bootloader.bin: 
 	nasm -fbin bootloader.asm -o bootloader.bin

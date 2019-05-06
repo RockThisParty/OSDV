@@ -1,25 +1,46 @@
 #pragma once
 
-//Структура описывающая шлюз прерываний
-struct idt_entry_struct
+#define PIC1_CMD 0x20
+#define PIC1_DATA 0x21
+#define PIC2_CMD 0xA0
+#define PIC2_DATA 0xA1
+#define PIC_READ_IRR 0x0a
+#define PIC_READ_ISR 0x0b
+#define IRQ0 32
+#define IRQ1 33
+#define IRQ2 34
+#define IRQ3 35
+#define IRQ4 36
+#define IRQ5 37
+#define IRQ6 38
+#define IRQ7 39
+#define IRQ8 40
+#define IRQ9 41
+#define IRQ10 42
+#define IRQ11 43
+#define IRQ12 44
+#define IRQ13 45
+#define IRQ14 46
+#define IRQ15 47
+
+struct idt_gate_struct
 {
 	unsigned short base_lo;	//младшие 16 бит - куда происходит переход в случае прерывания
-	unsigned short sel;	//переключатель сегмента ядра 
+	unsigned short sel;
 	unsigned char always0;	
 	unsigned char flags;	
 	unsigned short base_hi;	//старшие 16 бит - куда происходит переход
 } __attribute__((packed));
 
-typedef struct idt_entry_struct idt_entry_t;
+typedef struct idt_gate_struct idt_gate_t;
 
-//Структура, описывающая указатель на массив обработчиков прерываний
-struct idt_ptr_struct
+struct idt_register_struct
 {
 	unsigned short limit;
-	unsigned base;											//адрес первого элемента нашего массива idt_entry_t
+	unsigned base;											
 } __attribute__((packed));
 
-typedef struct idt_ptr_struct idt_ptr_t;
+typedef struct idt_register_struct idt_register_t;
 
 struct registers
 {
@@ -67,3 +88,20 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
+
+extern void irq0();
+extern void irq1();
+extern void irq2();
+extern void irq3();
+extern void irq4();
+extern void irq5();
+extern void irq6();
+extern void irq7();
+extern void irq8();
+extern void irq9();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
