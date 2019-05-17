@@ -1,11 +1,12 @@
 //const char *str = "Hello C World";
 #include "interrupt.h"
 #include "common.h"
+#include "timer.h"
 
 #define PANIC(err_msg) PANIC_FUNC(err_msg,__FILE__,__LINE__)
 
 char * const vidptr = (char *)0xb8000;
-unsigned global_vid_pointer = 0;
+unsigned global_vid_pointer = 80;
 char dest[1024] = {0};
 
 void scroll()
@@ -125,7 +126,7 @@ void PANIC_FUNC(const char* err_msg, const char* filename, int line)
 //-------------------------------
 //Start IDT
 //-------------------------------
-idt_gate_t idt_gate[32] __attribute__((aligned(8)));
+idt_gate_t idt_gate[48] __attribute__((aligned(8)));
 
 idt_register_t idt_register;
 
@@ -134,14 +135,10 @@ void isr_handler(registers_t regs)
 	print("recieved interrupt: ");
 	print(itos(regs.num, 10));
 	print("\n");
-	//while(1);
-}
-
-void irq_handler(registers_t regs)
-{
-	print(itos(regs.num, 10));
+	print("error code: ");
+	print(itos(regs.err_code, 10));
 	print("\n");
-	//while(1);
+	while(1);
 }
 
 static void idt_set_gate(const unsigned int index, const unsigned int offset, const unsigned short int selector, const unsigned char type_attr)
@@ -189,22 +186,6 @@ void init_idt()
 	idt_set_gate(30, (unsigned int)isr30, 0x08, 0x8E);
 	idt_set_gate(31, (unsigned int)isr31, 0x08, 0x8E);
 
-	//Remap the irq table
-	outb(0x20, 0x11);
-	outb(0xa0, 0x11);
-
-	outb(0x21, 0x20);
-	outb(0xa1, 0x28);
-	outb(0x21, 0x04);
-	outb(0xa1, 0x02);
-
-	outb(0x21, 0x01);
-	outb(0xa1, 0x01);
-
-	outb(0x21, 0x00);
-	outb(0xa1, 0x00);
-
-
 	idt_set_gate(32, (unsigned int)irq0, 0x08, 0x08E);
 	idt_set_gate(33, (unsigned int)irq1, 0x08, 0x08E);
 	idt_set_gate(34, (unsigned int)irq2, 0x08, 0x08E);
@@ -222,8 +203,19 @@ void init_idt()
 	idt_set_gate(46, (unsigned int)irq14, 0x08, 0x08E);
 	idt_set_gate(47, (unsigned int)irq15, 0x08, 0x08E);
 
+	outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0xff);
+    outb(0xA1, 0xff);
+
 	idt_register.base = (unsigned int)&idt_gate;
-	idt_register.limit = sizeof(idt_gate_t) * 32 - 1;
+	idt_register.limit = sizeof(idt_gate_t) * 48 - 1;
 
 	asm volatile(
 		"sti\n\t"
@@ -233,6 +225,54 @@ void init_idt()
 	);
 }	
 //-------------------------------
+//----------TIMER----------------
+
+unsigned tick = 0;
+
+void PIT_handler(unsigned tick)
+{
+	print("tick! : ");
+	print(itos(tick, 10));
+	print("\n");
+}
+
+void timer_callback()
+{
+	tick++;
+	PIT_handler(tick);
+}
+
+void init_timer(unsigned freq)
+{
+	unsigned divider = 1193182/freq;
+	unsigned char low_byte = (unsigned char)(divider & 0xff);
+	unsigned char high_byte = (unsigned char)((divider >> 8) & 0xff);
+	outb(0x43, 0x36);
+	outb(0x40, low_byte);
+	outb(0x40, high_byte);
+	unsigned char a = inb(MASTER_DATA);
+	a &= ~1;
+	outb(MASTER_DATA, a);
+}
+
+void irq_handler(registers_t regs)
+{
+	print("IRQ: ");
+	print(itos(regs.num-32, 10));
+	print("\n");
+	if(regs.num == 32)
+	{
+		timer_callback();
+	}
+	if(regs.num >= 40)
+	{
+		outb(SLAVE_CMD, 0x20); 
+	}
+	outb(MASTER_CMD, 0x20);
+	//else while(1);
+}
+
+//_______________________________
 
 int cmain()
 {
@@ -240,7 +280,10 @@ int cmain()
 	//PANIC("ERROR");
 	//print("Hello World on C\n");
 	init_idt();
-	asm volatile("sti\n\t");
+	//asm volatile("int 32");
+	init_timer(1);
+	//while(1) timer_callback();
+	//asm volatile("int 35");
 	//asm volatile("int 13");
 	return 0;
 }

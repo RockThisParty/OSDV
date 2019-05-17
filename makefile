@@ -1,5 +1,5 @@
 clean:
-	rm -f bootloader.bin disk.img start.o cmain.o interrupt.o isr.o kernel
+	rm -f bootloader.bin disk.img start.o cmain.o interrupt.o isr.o kernel common.o
 
 build: clean bootloader.bin kernel
 	dd if=/dev/zero of=disk.img bs=1M count=1

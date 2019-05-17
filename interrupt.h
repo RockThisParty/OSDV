@@ -1,9 +1,9 @@
 #pragma once
 
-#define PIC1_CMD 0x20
-#define PIC1_DATA 0x21
-#define PIC2_CMD 0xA0
-#define PIC2_DATA 0xA1
+#define MASTER_CMD 0x20
+#define MASTER_DATA 0x21
+#define SLAVE_CMD 0xA0
+#define SLAVE_DATA 0xA1
 #define PIC_READ_IRR 0x0a
 #define PIC_READ_ISR 0x0b
 #define IRQ0 32
@@ -44,8 +44,8 @@ typedef struct idt_register_struct idt_register_t;
 
 struct registers
 {
-	unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;	//pushed from isr_common_stub
-	unsigned int num, err_code;								//pushed from ISR
+	unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;	
+	unsigned int num, err_code;								
 	unsigned int eip, cs, errflags, useresp, ss;
 } __attribute__((packed));
 

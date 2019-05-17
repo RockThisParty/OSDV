@@ -4,7 +4,7 @@
 
 cli						;disable interrupts
 
-lgdt[gdt_descriptor]	;initial gdt
+lgdt [gdt_descriptor]	;initial gdt
 
 mov eax, cr0			;cr0->0
 or al, 1
@@ -20,7 +20,7 @@ start:
     mov es, ax
     mov fs, ax
     mov gs, ax
-	mov ss, ax
+    mov ss, ax
     
     mov edx, 0xb8000 + 160
     mov esi, msg
