@@ -1,7 +1,6 @@
 //const char *str = "Hello C World";
 #include "interrupt.h"
 #include "common.h"
-#include "timer.h"
 
 #define PANIC(err_msg) PANIC_FUNC(err_msg,__FILE__,__LINE__)
 
@@ -50,6 +49,13 @@ void print(const char str[])
 		if(str[i] == '\n')
 		{
 			global_vid_pointer = global_vid_pointer - (global_vid_pointer % 80) + 80;
+			break;
+		}
+		if(str[i] == '\b')
+		{
+			--global_vid_pointer;
+			vidptr[global_vid_pointer<<1] = ' ';
+			break;
 		}
 		else
 		{
@@ -186,6 +192,8 @@ void init_idt()
 	idt_set_gate(30, (unsigned int)isr30, 0x08, 0x8E);
 	idt_set_gate(31, (unsigned int)isr31, 0x08, 0x8E);
 
+//------------------Init IRQ--------------------------
+
 	idt_set_gate(32, (unsigned int)irq0, 0x08, 0x08E);
 	idt_set_gate(33, (unsigned int)irq1, 0x08, 0x08E);
 	idt_set_gate(34, (unsigned int)irq2, 0x08, 0x08E);
@@ -207,8 +215,8 @@ void init_idt()
     outb(0xA0, 0x11);
     outb(0x21, 0x20);
     outb(0xA1, 0x28);
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
+    outb(0x21, 4);
+    outb(0xA1, 2);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
     outb(0x21, 0xff);
@@ -218,10 +226,12 @@ void init_idt()
 	idt_register.limit = sizeof(idt_gate_t) * 48 - 1;
 
 	asm volatile(
-		"sti\n\t"
 		"lidt [%0]"
 		:
 		:"m"(idt_register)
+	);
+	asm volatile(
+		"sti\n\t"
 	);
 }	
 //-------------------------------
@@ -229,10 +239,10 @@ void init_idt()
 
 unsigned tick = 0;
 
-void PIT_handler(unsigned tick)
+void PIT_handler()
 {
-	print("tick! : ");
-	print(itos(tick, 10));
+	print("tick! ");
+	//print(itos(tick, 10));
 	print("\n");
 }
 
@@ -250,26 +260,87 @@ void init_timer(unsigned freq)
 	outb(0x43, 0x36);
 	outb(0x40, low_byte);
 	outb(0x40, high_byte);
-	unsigned char a = inb(MASTER_DATA);
-	a &= ~1;
-	outb(MASTER_DATA, a);
+	unsigned char mask = inb(MASTER_DATA);
+	mask &= ~1;
+	outb(MASTER_DATA, mask);
+}
+
+//----------------------------------------
+//-------------Keyboard-------------------
+void init_keyboard()
+{
+	unsigned char mask = inb(MASTER_DATA);
+	mask &= ~2;
+	outb(MASTER_DATA, mask);
+}
+
+char scancode_to_ascii[] = "1234567890-=\bqwertyuiop[]\nasdfghjkl;'zxcvbnm,./";
+
+
+static void keyboard_handler()
+{
+	static char tmp[2] = {0,0};
+	unsigned status = inb(0x64);
+	if((status & 0b1) && !(status & 0b100000))
+	{
+		unsigned scancode = inb(0x60);
+		char letter = 0;
+		if (0x02 <= scancode && scancode <= 0x0e)
+		{
+			scancode -= 0x02;
+			letter = scancode_to_ascii[scancode];
+		}
+		if (0x10 <= scancode && scancode <= 0x1c)
+		{
+			scancode -= 0x10;
+			letter = scancode_to_ascii[scancode+13];
+		}
+		if (0x1e <= scancode && scancode <= 0x28)
+		{
+			scancode -= 0x1e;
+			letter = scancode_to_ascii[scancode+13+13];
+		}
+		if (0x2c <= scancode && scancode <= 0x35)
+		{
+			scancode -= 0x2c;
+			letter = scancode_to_ascii[scancode+12+13+12];
+		}
+		if (scancode == 0x39)
+		{
+			letter = ' ';
+		}
+		if (scancode == 0xa9)
+		{
+			letter = '`';
+		}
+		if (scancode == 0x2b)
+		{
+			letter = '\\';
+		}
+		tmp[0] = letter;
+		print(tmp);
+	}
 }
 
 void irq_handler(registers_t regs)
 {
-	print("IRQ: ");
-	print(itos(regs.num-32, 10));
-	print("\n");
+	//print("IRQ: ");
+	//print(itos(regs.num-32, 10));
+	//print("\n");
 	if(regs.num == 32)
 	{
-		timer_callback();
+		//timer_callback();
+		PIT_handler();
+	}
+	if(regs.num == 33)
+	{
+		keyboard_handler();
 	}
 	if(regs.num >= 40)
 	{
 		outb(SLAVE_CMD, 0x20); 
 	}
 	outb(MASTER_CMD, 0x20);
-	//else while(1);
 }
 
 //_______________________________
@@ -278,10 +349,11 @@ int cmain()
 {
 	//PANIC_FUNC("Error", __FILE__, __LINE__);
 	//PANIC("ERROR");
-	//print("Hello World on C\n");
+	//print("Hello World on C\b\n");
 	init_idt();
 	//asm volatile("int 32");
-	init_timer(1);
+	//init_timer(1);
+	init_keyboard();
 	//while(1) timer_callback();
 	//asm volatile("int 35");
 	//asm volatile("int 13");
