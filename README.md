@@ -1,1 +1,4 @@
 # OSDV
+
+Initialized Keyboard
+IDT
